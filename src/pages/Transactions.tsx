@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { transactionService, portfolioService } from '@/services/api';
-import { Transaction, TransactionType, PortfolioItem, AssetType } from '@/types';
+import { portfolioService } from '@/services/api';
+import { transactionService as supabaseTransactionService } from '@/services/transactions';
+import { Transaction, TransactionType, PortfolioItem } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,11 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2, Wallet, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const Transactions = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>('all');
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: new Date().toISOString(),
@@ -32,25 +32,68 @@ const Transactions = () => {
   
   // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [transactionsData, portfolioData] = await Promise.all([
-          transactionService.getTransactions(),
-          portfolioService.getPortfolioItems()
-        ]);
-        setTransactions(transactionsData);
-        setPortfolioItems(portfolioData);
-      } catch (error) {
-        console.error('Error fetching transactions data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
+
+  // React Query for transactions
+  const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: supabaseTransactionService.getTransactions
+  });
+
+  // React Query for portfolio items
+  const { data: portfolioItems = [], isLoading: isLoadingPortfolio } = useQuery({
+    queryKey: ['portfolioItems'],
+    queryFn: portfolioService.getPortfolioItems
+  });
+
+  // Transaction mutations
+  const addTransactionMutation = useMutation({
+    mutationFn: supabaseTransactionService.addTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolioItems'] });
+      setNewTransaction({
+        date: new Date().toISOString(),
+        type: 'Buy',
+        assetName: '',
+        quantity: 0,
+        price: 0,
+        notes: ''
+      });
+      toast.success('Transaction added successfully');
+    },
+    onError: (error) => {
+      console.error('Error adding transaction:', error);
+      toast.error('Failed to add transaction');
+    }
+  });
+
+  const updateTransactionMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: number, updates: Partial<Transaction> }) => 
+      supabaseTransactionService.updateTransaction(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolioItems'] });
+      setEditingTransaction(null);
+      toast.success('Transaction updated successfully');
+    },
+    onError: (error) => {
+      console.error('Error updating transaction:', error);
+      toast.error('Failed to update transaction');
+    }
+  });
+
+  const deleteTransactionMutation = useMutation({
+    mutationFn: supabaseTransactionService.deleteTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolioItems'] });
+      toast.success('Transaction deleted successfully');
+    },
+    onError: (error) => {
+      console.error('Error deleting transaction:', error);
+      toast.error('Failed to delete transaction');
+    }
+  });
   
   // Handle filter
   const filteredTransactions = transactions.filter(transaction => 
@@ -92,23 +135,7 @@ const Transactions = () => {
     }
     
     try {
-      await transactionService.addTransaction(newTransaction as Omit<Transaction, 'id' | 'userId'>);
-      const updatedTransactions = await transactionService.getTransactions();
-      setTransactions(updatedTransactions);
-      
-      // Reset form
-      setNewTransaction({
-        date: new Date().toISOString(),
-        type: 'Buy',
-        assetName: '',
-        quantity: 0,
-        price: 0,
-        notes: ''
-      });
-      
-      // Update portfolio items (they may have changed due to transaction)
-      const updatedPortfolio = await portfolioService.getPortfolioItems();
-      setPortfolioItems(updatedPortfolio);
+      await addTransactionMutation.mutateAsync(newTransaction as Omit<Transaction, "id" | "userId">);
     } catch (error) {
       console.error('Error adding transaction:', error);
     }
@@ -120,14 +147,10 @@ const Transactions = () => {
     }
     
     try {
-      await transactionService.updateTransaction(editingTransaction.id, editingTransaction);
-      const updatedTransactions = await transactionService.getTransactions();
-      setTransactions(updatedTransactions);
-      setEditingTransaction(null);
-      
-      // Update portfolio items (they may have changed due to transaction update)
-      const updatedPortfolio = await portfolioService.getPortfolioItems();
-      setPortfolioItems(updatedPortfolio);
+      await updateTransactionMutation.mutateAsync({
+        id: editingTransaction.id,
+        updates: editingTransaction
+      });
     } catch (error) {
       console.error('Error updating transaction:', error);
     }
@@ -135,13 +158,7 @@ const Transactions = () => {
   
   const handleDeleteTransaction = async (id: number) => {
     try {
-      await transactionService.deleteTransaction(id);
-      const updatedTransactions = await transactionService.getTransactions();
-      setTransactions(updatedTransactions);
-      
-      // Update portfolio items (they may have changed due to transaction deletion)
-      const updatedPortfolio = await portfolioService.getPortfolioItems();
-      setPortfolioItems(updatedPortfolio);
+      await deleteTransactionMutation.mutateAsync(id);
     } catch (error) {
       console.error('Error deleting transaction:', error);
     }
@@ -188,11 +205,16 @@ const Transactions = () => {
   };
   
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, 'MMM d, yyyy h:mm a');
+    try {
+      const date = new Date(dateString);
+      return format(date, 'MMM d, yyyy h:mm a');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString;
+    }
   };
   
-  if (loading) {
+  if (isLoadingTransactions || isLoadingPortfolio) {
     return (
       <DashboardLayout>
         <div className="h-96 flex items-center justify-center">
@@ -376,7 +398,118 @@ const Transactions = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              {/* Dialog content - reused from above */}
+              <DialogHeader>
+                <DialogTitle>Add New Transaction</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="date">Date</Label>
+                    <Input
+                      id="date"
+                      type="datetime-local"
+                      value={newTransaction.date ? new Date(newTransaction.date).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => handleInputChange('date', new Date(e.target.value).toISOString())}
+                      className={errors.date ? 'border-red-500' : ''}
+                    />
+                    {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="type">Transaction Type</Label>
+                    <Select
+                      value={newTransaction.type}
+                      onValueChange={(value) => handleNewTransactionTypeChange(value as TransactionType)}
+                    >
+                      <SelectTrigger id="type" className={errors.type ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {transactionTypes.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type}</p>}
+                  </div>
+                </div>
+                
+                {(newTransaction.type === 'Buy' || newTransaction.type === 'Sell') && (
+                  <>
+                    <div>
+                      <Label htmlFor="assetName">Asset Name</Label>
+                      <Select
+                        value={newTransaction.assetName}
+                        onValueChange={(value) => handleInputChange('assetName', value)}
+                      >
+                        <SelectTrigger id="assetName" className={errors.assetName ? 'border-red-500' : ''}>
+                          <SelectValue placeholder="Select asset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {portfolioItems.map((item) => (
+                            <SelectItem key={item.id} value={item.assetName}>{item.assetName}</SelectItem>
+                          ))}
+                          <SelectItem value="other">Other (New Asset)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {newTransaction.assetName === 'other' && (
+                        <Input
+                          className="mt-2"
+                          placeholder="Enter asset name"
+                          onChange={(e) => handleInputChange('assetName', e.target.value)}
+                        />
+                      )}
+                      {errors.assetName && <p className="text-red-500 text-xs mt-1">{errors.assetName}</p>}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="quantity">Quantity</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        value={newTransaction.quantity === 0 ? '' : newTransaction.quantity}
+                        onChange={(e) => handleInputChange('quantity', parseFloat(e.target.value) || 0)}
+                        className={errors.quantity ? 'border-red-500' : ''}
+                      />
+                      {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+                    </div>
+                  </>
+                )}
+                
+                <div>
+                  <Label htmlFor="price">
+                    {newTransaction.type === 'Buy' || newTransaction.type === 'Sell' 
+                      ? 'Price per Unit ($)' 
+                      : 'Amount ($)'}
+                  </Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={newTransaction.price === 0 ? '' : newTransaction.price}
+                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
+                    className={errors.price ? 'border-red-500' : ''}
+                  />
+                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={newTransaction.notes || ''}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleAddTransaction} className="bg-finance-primary hover:bg-finance-primary/90">
+                  Add Transaction
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -418,11 +551,11 @@ const Transactions = () => {
                       </TableCell>
                       <TableCell>{transaction.assetName || '-'}</TableCell>
                       <TableCell>{transaction.quantity || '-'}</TableCell>
-                      <TableCell>${transaction.price.toLocaleString()}</TableCell>
+                      <TableCell>${transaction.price?.toLocaleString() || 0}</TableCell>
                       <TableCell>
                         {transaction.quantity 
                           ? `$${(transaction.price * transaction.quantity).toLocaleString()}`
-                          : `$${transaction.price.toLocaleString()}`
+                          : `$${transaction.price?.toLocaleString() || 0}`
                         }
                       </TableCell>
                       <TableCell>
