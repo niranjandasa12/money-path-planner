@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { goalService } from '@/services/api';
-import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Target, Calendar, Trash2, Edit, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { goalService as supabaseGoalService } from '@/services/goals';
+import { goalService } from '@/services/goals';
+import { Goal } from '@/types';
+import { useToast } from "@/hooks/use-toast";
 
 const Goals = () => {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({
     name: '',
@@ -28,12 +30,12 @@ const Goals = () => {
   // Query goals data
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals'],
-    queryFn: supabaseGoalService.getGoals
+    queryFn: goalService.getGoals
   });
 
   // Mutations
   const addGoalMutation = useMutation({
-    mutationFn: supabaseGoalService.addGoal,
+    mutationFn: goalService.addGoal,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       setNewGoal({
@@ -42,22 +44,55 @@ const Goals = () => {
         currentAmount: 0,
         deadline: new Date().toISOString().split('T')[0]
       });
+      toast({
+        title: "Goal Added",
+        description: "Your financial goal has been successfully added."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to add goal: ${error.message}`,
+        variant: "destructive"
+      });
     }
   });
 
   const updateGoalMutation = useMutation({
     mutationFn: ({ id, updates }: { id: number, updates: Partial<Goal> }) => 
-      supabaseGoalService.updateGoal(id, updates),
+      goalService.updateGoal(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       setEditingGoal(null);
+      toast({
+        title: "Goal Updated",
+        description: "Your financial goal has been successfully updated."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update goal: ${error.message}`,
+        variant: "destructive"
+      });
     }
   });
 
   const deleteGoalMutation = useMutation({
-    mutationFn: supabaseGoalService.deleteGoal,
+    mutationFn: goalService.deleteGoal,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      toast({
+        title: "Goal Deleted",
+        description: "Your financial goal has been successfully removed."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete goal: ${error.message}`,
+        variant: "destructive"
+      });
     }
   });
 
@@ -175,7 +210,7 @@ const Goals = () => {
                 <Label htmlFor="name">Goal Name</Label>
                 <Input
                   id="name"
-                  value={newGoal.name}
+                  value={newGoal.name || ''}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   className={errors.name ? 'border-red-500' : ''}
                   placeholder="e.g., Retirement Fund, House Down Payment"
@@ -214,7 +249,7 @@ const Goals = () => {
                 <Input
                   id="deadline"
                   type="date"
-                  value={newGoal.deadline}
+                  value={newGoal.deadline || ''}
                   onChange={(e) => handleInputChange('deadline', e.target.value)}
                   className={errors.deadline ? 'border-red-500' : ''}
                 />
@@ -256,7 +291,7 @@ const Goals = () => {
                   <Label htmlFor="name">Goal Name</Label>
                   <Input
                     id="name"
-                    value={newGoal.name}
+                    value={newGoal.name || ''}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     className={errors.name ? 'border-red-500' : ''}
                     placeholder="e.g., Retirement Fund, House Down Payment"
@@ -295,7 +330,7 @@ const Goals = () => {
                   <Input
                     id="deadline"
                     type="date"
-                    value={newGoal.deadline}
+                    value={newGoal.deadline || ''}
                     onChange={(e) => handleInputChange('deadline', e.target.value)}
                     className={errors.deadline ? 'border-red-500' : ''}
                   />
@@ -316,9 +351,13 @@ const Goals = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {goals.map((goal) => {
-            const progress = (goal.currentAmount / goal.targetAmount) * 100;
-            const remaining = goal.targetAmount - goal.currentAmount;
-            const deadlineDate = new Date(goal.deadline);
+            const progress = goal.currentAmount && goal.targetAmount ? 
+              (goal.currentAmount / goal.targetAmount) * 100 : 0;
+            
+            const remaining = goal.targetAmount && goal.currentAmount ? 
+              goal.targetAmount - goal.currentAmount : 0;
+            
+            const deadlineDate = goal.deadline ? new Date(goal.deadline) : new Date();
             const today = new Date();
             const timeRemaining = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
             const isOverdue = timeRemaining < 0;
@@ -381,7 +420,7 @@ const Goals = () => {
                                 <Input
                                   id="edit-deadline"
                                   type="date"
-                                  value={new Date(editingGoal.deadline).toISOString().split('T')[0]}
+                                  value={editingGoal.deadline ? new Date(editingGoal.deadline).toISOString().split('T')[0] : ''}
                                   onChange={(e) => handleEditInputChange('deadline', e.target.value)}
                                   className={errors.deadline ? 'border-red-500' : ''}
                                 />
