@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { portfolioService, goalService } from '@/services/api';
 import { PortfolioSummary, Goal } from '@/types';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
@@ -25,6 +26,7 @@ const Dashboard = () => {
         setGoals(goalsData);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }

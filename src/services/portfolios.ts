@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { PortfolioItem, AssetType } from "@/types";
+import { PortfolioItem, AssetType, PortfolioSummary } from "@/types";
 
 // Types to match the database schema
 type DbPortfolioItem = {
@@ -45,34 +45,36 @@ export const portfolioService = {
     return (data as DbPortfolioItem[]).map(mapToPortfolioItem);
   },
 
-  async getPortfolioSummary() {
+  async getPortfolioSummary(): Promise<PortfolioSummary> {
     // Get portfolio items
     const items = await this.getPortfolioItems();
 
     // Calculate totals
     const totalValue = items.reduce((sum, item) => sum + item.currentValue, 0);
     const totalInvested = items.reduce((sum, item) => sum + (item.purchasePrice * item.quantity), 0);
-    const profit = totalValue - totalInvested;
-    const profitPercentage = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
+    const totalGains = totalValue - totalInvested;
+    const gainPercentage = totalInvested > 0 ? (totalGains / totalInvested) * 100 : 0;
 
     // Group by asset type
-    const assetAllocation = items.reduce((allocation, item) => {
-      const type = item.assetType;
-      if (!allocation[type]) {
-        allocation[type] = 0;
-      }
-      allocation[type] += item.currentValue;
-      return allocation;
-    }, {} as Record<string, number>);
+    const assetTypeMap = new Map<string, number>();
+    
+    items.forEach(item => {
+      const currentTypeValue = assetTypeMap.get(item.assetType) || 0;
+      assetTypeMap.set(item.assetType, currentTypeValue + item.currentValue);
+    });
+    
+    const assetDistribution = Array.from(assetTypeMap.entries()).map(([type, value]) => ({
+      type,
+      value,
+      percentage: (value / totalValue) * 100
+    }));
 
-    // Return summary
+    // Return summary in the format expected by PortfolioSummary type
     return {
       totalValue,
-      totalInvested,
-      profit,
-      profitPercentage,
-      assetAllocation,
-      totalAssets: items.length
+      totalGains,
+      gainPercentage,
+      assetDistribution
     };
   },
 
