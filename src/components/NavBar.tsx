@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,14 +76,15 @@ const NavBar = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <span className="hidden md:inline text-sm font-medium text-gray-700">
-            {user?.fullName}
-          </span>
+          {user?.email && (
+            <span className="hidden md:inline text-sm font-medium text-gray-700">
+              {user.email}
+            </span>
+          )}
           <Button variant="outline" size="sm" onClick={logout}>Logout</Button>
         </div>
       </div>
       
-      {/* Mobile bottom navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-10">
         <div className="grid grid-cols-5 h-16">
           <Link 

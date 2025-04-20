@@ -1,8 +1,7 @@
-
 export interface User {
-  id: number;
-  fullName: string;
+  id: string;
   email: string;
+  fullName: string;
 }
 
 export interface PortfolioItem {
