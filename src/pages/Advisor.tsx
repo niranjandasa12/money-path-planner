@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
-import { advisorService } from '@/services/api';
+import { advisorService } from '@/services/advisors';
 import { Advisor, AdvisorMeeting } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,11 +16,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, User, Mail, Briefcase, Plus, Trash2, Send } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const AdvisorPage = () => {
-  const [advisors, setAdvisors] = useState<Advisor[]>([]);
-  const [meetings, setMeetings] = useState<AdvisorMeeting[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  
+  // State for UI
   const [selectedAdvisor, setSelectedAdvisor] = useState<Advisor | null>(null);
   const [newMeeting, setNewMeeting] = useState<Partial<AdvisorMeeting>>({
     advisorId: 0,
@@ -42,28 +44,59 @@ const AdvisorPage = () => {
   // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  // Queries
+  const { 
+    data: advisors = [], 
+    isLoading: advisorsLoading 
+  } = useQuery({
+    queryKey: ['advisors'],
+    queryFn: () => advisorService.getAdvisors(),
+  });
+  
+  const { 
+    data: meetings = [], 
+    isLoading: meetingsLoading 
+  } = useQuery({
+    queryKey: ['advisorMeetings'],
+    queryFn: () => advisorService.getAdvisorMeetings(),
+  });
+
+  // Mutations
+  const scheduleMeetingMutation = useMutation({
+    mutationFn: (meetingData: Omit<AdvisorMeeting, "id" | "userId" | "advisor">) => 
+      advisorService.scheduleAdvisorMeeting(meetingData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['advisorMeetings'] });
+      toast.success("Meeting scheduled successfully");
+      setNewMeeting({
+        advisorId: selectedAdvisor?.id || 0,
+        date: new Date().toISOString(),
+        topic: ''
+      });
+    },
+    onError: (error) => {
+      toast.error(`Failed to schedule meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  });
+
+  const cancelMeetingMutation = useMutation({
+    mutationFn: (id: number) => advisorService.cancelAdvisorMeeting(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['advisorMeetings'] });
+      toast.success("Meeting cancelled successfully");
+    },
+    onError: (error) => {
+      toast.error(`Failed to cancel meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  });
+  
+  // Set initial selected advisor
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [advisorsData, meetingsData] = await Promise.all([
-          advisorService.getAdvisors(),
-          advisorService.getAdvisorMeetings()
-        ]);
-        setAdvisors(advisorsData);
-        setMeetings(meetingsData);
-        if (advisorsData.length > 0) {
-          setSelectedAdvisor(advisorsData[0]);
-          setNewMeeting(prev => ({ ...prev, advisorId: advisorsData[0].id }));
-        }
-      } catch (error) {
-        console.error('Error fetching advisor data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
+    if (advisors.length > 0 && !selectedAdvisor) {
+      setSelectedAdvisor(advisors[0]);
+      setNewMeeting(prev => ({ ...prev, advisorId: advisors[0].id }));
+    }
+  }, [advisors, selectedAdvisor]);
   
   // Form handling
   const validateMeetingForm = () => {
@@ -96,28 +129,11 @@ const AdvisorPage = () => {
       return;
     }
     
-    try {
-      await advisorService.scheduleAdvisorMeeting(newMeeting as Omit<AdvisorMeeting, 'id' | 'userId' | 'advisor'>);
-      const updatedMeetings = await advisorService.getAdvisorMeetings();
-      setMeetings(updatedMeetings);
-      setNewMeeting({
-        advisorId: selectedAdvisor?.id || 0,
-        date: new Date().toISOString(),
-        topic: ''
-      });
-    } catch (error) {
-      console.error('Error scheduling meeting:', error);
-    }
+    scheduleMeetingMutation.mutate(newMeeting as Omit<AdvisorMeeting, "id" | "userId" | "advisor">);
   };
   
   const handleCancelMeeting = async (id: number) => {
-    try {
-      await advisorService.cancelAdvisorMeeting(id);
-      const updatedMeetings = await advisorService.getAdvisorMeetings();
-      setMeetings(updatedMeetings);
-    } catch (error) {
-      console.error('Error canceling meeting:', error);
-    }
+    cancelMeetingMutation.mutate(id);
   };
   
   const handleSendMessage = () => {
@@ -157,7 +173,9 @@ const AdvisorPage = () => {
     return format(date, 'h:mm a');
   };
   
-  if (loading) {
+  const isLoading = advisorsLoading || meetingsLoading;
+  
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="h-96 flex items-center justify-center">
