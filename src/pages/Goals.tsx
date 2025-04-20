@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { goalService } from '@/services/api';
@@ -12,10 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Target, Calendar, Trash2, Edit, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { goalService as supabaseGoalService } from '@/services/goals';
 
 const Goals = () => {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({
     name: '',
     targetAmount: 0,
@@ -23,25 +23,44 @@ const Goals = () => {
     deadline: new Date().toISOString().split('T')[0]
   });
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  
-  // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  useEffect(() => {
-    const fetchGoals = async () => {
-      try {
-        const data = await goalService.getGoals();
-        setGoals(data);
-      } catch (error) {
-        console.error('Error fetching goals data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchGoals();
-  }, []);
-  
+
+  // Query goals data
+  const { data: goals = [], isLoading } = useQuery({
+    queryKey: ['goals'],
+    queryFn: supabaseGoalService.getGoals
+  });
+
+  // Mutations
+  const addGoalMutation = useMutation({
+    mutationFn: supabaseGoalService.addGoal,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setNewGoal({
+        name: '',
+        targetAmount: 0,
+        currentAmount: 0,
+        deadline: new Date().toISOString().split('T')[0]
+      });
+    }
+  });
+
+  const updateGoalMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: number, updates: Partial<Goal> }) => 
+      supabaseGoalService.updateGoal(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setEditingGoal(null);
+    }
+  });
+
+  const deleteGoalMutation = useMutation({
+    mutationFn: supabaseGoalService.deleteGoal,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    }
+  });
+
   // Form handling
   const validateForm = (goal: Partial<Goal>) => {
     const newErrors: Record<string, string> = {};
@@ -71,52 +90,42 @@ const Goals = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleAddGoal = async () => {
     if (!validateForm(newGoal)) {
       return;
     }
-    
+
     try {
-      await goalService.addGoal(newGoal as Omit<Goal, 'id' | 'userId' | 'createdAt'>);
-      const data = await goalService.getGoals();
-      setGoals(data);
-      setNewGoal({
-        name: '',
-        targetAmount: 0,
-        currentAmount: 0,
-        deadline: new Date().toISOString().split('T')[0]
-      });
+      await addGoalMutation.mutateAsync(newGoal as Omit<Goal, 'id' | 'userId' | 'createdAt'>);
     } catch (error) {
       console.error('Error adding goal:', error);
     }
   };
-  
+
   const handleUpdateGoal = async () => {
     if (!editingGoal || !validateForm(editingGoal)) {
       return;
     }
-    
+
     try {
-      await goalService.updateGoal(editingGoal.id, editingGoal);
-      const data = await goalService.getGoals();
-      setGoals(data);
-      setEditingGoal(null);
+      await updateGoalMutation.mutateAsync({
+        id: editingGoal.id,
+        updates: editingGoal
+      });
     } catch (error) {
       console.error('Error updating goal:', error);
     }
   };
-  
+
   const handleDeleteGoal = async (id: number) => {
     try {
-      await goalService.deleteGoal(id);
-      const data = await goalService.getGoals();
-      setGoals(data);
+      await deleteGoalMutation.mutateAsync(id);
     } catch (error) {
       console.error('Error deleting goal:', error);
     }
   };
-  
+
   const handleInputChange = (field: keyof typeof newGoal, value: any) => {
     setNewGoal(prev => ({
       ...prev,
@@ -132,8 +141,8 @@ const Goals = () => {
       });
     }
   };
-  
-  if (loading) {
+
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="h-96 flex items-center justify-center">
@@ -144,7 +153,7 @@ const Goals = () => {
       </DashboardLayout>
     );
   }
-  
+
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
@@ -239,7 +248,68 @@ const Goals = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
-              {/* Dialog content - reused from above */}
+              <DialogHeader>
+                <DialogTitle>Add New Financial Goal</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="name">Goal Name</Label>
+                  <Input
+                    id="name"
+                    value={newGoal.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className={errors.name ? 'border-red-500' : ''}
+                    placeholder="e.g., Retirement Fund, House Down Payment"
+                  />
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="targetAmount">Target Amount ($)</Label>
+                  <Input
+                    id="targetAmount"
+                    type="number"
+                    value={newGoal.targetAmount === 0 ? '' : newGoal.targetAmount}
+                    onChange={(e) => handleInputChange('targetAmount', parseFloat(e.target.value) || 0)}
+                    className={errors.targetAmount ? 'border-red-500' : ''}
+                    placeholder="e.g., 10000"
+                  />
+                  {errors.targetAmount && <p className="text-red-500 text-xs mt-1">{errors.targetAmount}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="currentAmount">Current Amount ($)</Label>
+                  <Input
+                    id="currentAmount"
+                    type="number"
+                    value={newGoal.currentAmount === 0 ? '0' : newGoal.currentAmount}
+                    onChange={(e) => handleInputChange('currentAmount', parseFloat(e.target.value) || 0)}
+                    className={errors.currentAmount ? 'border-red-500' : ''}
+                    placeholder="e.g., 2500"
+                  />
+                  {errors.currentAmount && <p className="text-red-500 text-xs mt-1">{errors.currentAmount}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="deadline">Target Date</Label>
+                  <Input
+                    id="deadline"
+                    type="date"
+                    value={newGoal.deadline}
+                    onChange={(e) => handleInputChange('deadline', e.target.value)}
+                    className={errors.deadline ? 'border-red-500' : ''}
+                  />
+                  {errors.deadline && <p className="text-red-500 text-xs mt-1">{errors.deadline}</p>}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleAddGoal} className="bg-finance-primary hover:bg-finance-primary/90">
+                  Add Goal
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
