@@ -30,22 +30,18 @@ const Transactions = () => {
   });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   
-  // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // React Query for transactions
   const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery({
     queryKey: ['transactions'],
     queryFn: supabaseTransactionService.getTransactions
   });
 
-  // React Query for portfolio items
   const { data: portfolioItems = [], isLoading: isLoadingPortfolio } = useQuery({
     queryKey: ['portfolioItems'],
     queryFn: portfolioService.getPortfolioItems
   });
 
-  // Transaction mutations
   const addTransactionMutation = useMutation({
     mutationFn: supabaseTransactionService.addTransaction,
     onSuccess: () => {
@@ -61,9 +57,9 @@ const Transactions = () => {
       });
       toast.success('Transaction added successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error adding transaction:', error);
-      toast.error('Failed to add transaction');
+      toast.error(`Failed to add transaction: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -76,9 +72,9 @@ const Transactions = () => {
       setEditingTransaction(null);
       toast.success('Transaction updated successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error updating transaction:', error);
-      toast.error('Failed to update transaction');
+      toast.error(`Failed to update transaction: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -89,18 +85,16 @@ const Transactions = () => {
       queryClient.invalidateQueries({ queryKey: ['portfolioItems'] });
       toast.success('Transaction deleted successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error deleting transaction:', error);
-      toast.error('Failed to delete transaction');
+      toast.error(`Failed to delete transaction: ${error.message || 'Unknown error'}`);
     }
   });
-  
-  // Handle filter
+
   const filteredTransactions = transactions.filter(transaction => 
     filter === 'all' || transaction.type === filter
   );
-  
-  // Form handling
+
   const validateForm = (transaction: Partial<Transaction>) => {
     const newErrors: Record<string, string> = {};
     
@@ -128,7 +122,7 @@ const Transactions = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleAddTransaction = async () => {
     if (!validateForm(newTransaction)) {
       return;
@@ -140,7 +134,7 @@ const Transactions = () => {
       console.error('Error adding transaction:', error);
     }
   };
-  
+
   const handleUpdateTransaction = async () => {
     if (!editingTransaction || !validateForm(editingTransaction)) {
       return;
@@ -155,7 +149,7 @@ const Transactions = () => {
       console.error('Error updating transaction:', error);
     }
   };
-  
+
   const handleDeleteTransaction = async (id: number) => {
     try {
       await deleteTransactionMutation.mutateAsync(id);
@@ -163,14 +157,14 @@ const Transactions = () => {
       console.error('Error deleting transaction:', error);
     }
   };
-  
+
   const handleInputChange = (field: keyof typeof newTransaction, value: any) => {
     setNewTransaction(prev => ({
       ...prev,
       [field]: value
     }));
   };
-  
+
   const handleEditInputChange = (field: keyof Transaction, value: any) => {
     if (editingTransaction) {
       setEditingTransaction({
@@ -179,11 +173,10 @@ const Transactions = () => {
       });
     }
   };
-  
+
   const handleNewTransactionTypeChange = (type: TransactionType) => {
     setNewTransaction(prev => {
       const updated = { ...prev, type };
-      // If changing to Deposit or Withdraw, clear asset-specific fields
       if (type === 'Deposit' || type === 'Withdraw') {
         updated.assetName = undefined;
         updated.quantity = undefined;
@@ -191,11 +184,10 @@ const Transactions = () => {
       return updated;
     });
   };
-  
+
   const handleEditTransactionTypeChange = (type: TransactionType) => {
     if (editingTransaction) {
       const updated = { ...editingTransaction, type };
-      // If changing to Deposit or Withdraw, clear asset-specific fields
       if (type === 'Deposit' || type === 'Withdraw') {
         updated.assetName = undefined;
         updated.quantity = undefined;
@@ -203,7 +195,7 @@ const Transactions = () => {
       setEditingTransaction(updated);
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -213,7 +205,7 @@ const Transactions = () => {
       return dateString;
     }
   };
-  
+
   if (isLoadingTransactions || isLoadingPortfolio) {
     return (
       <DashboardLayout>
@@ -225,9 +217,9 @@ const Transactions = () => {
       </DashboardLayout>
     );
   }
-  
+
   const transactionTypes: TransactionType[] = ['Buy', 'Sell', 'Deposit', 'Withdraw'];
-  
+
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">

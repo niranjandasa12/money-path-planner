@@ -26,7 +26,8 @@ const mapToTransaction = (dbTransaction: DbTransaction): Transaction => ({
   notes: dbTransaction.notes || undefined
 });
 
-const mapToDbTransaction = (transaction: Omit<Transaction, "id" | "userId">): Omit<DbTransaction, "id" | "user_id"> => ({
+const mapToDbTransaction = (transaction: Omit<Transaction, "id" | "userId">): Omit<DbTransaction, "id"> => ({
+  user_id: 1, // Set default user ID to 1 - this fixes the null constraint error
   type: transaction.type,
   asset_name: transaction.assetName || null,
   quantity: transaction.quantity || null,
