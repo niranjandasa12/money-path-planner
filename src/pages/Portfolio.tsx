@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { portfolioService } from '@/services/api';
@@ -27,9 +26,8 @@ const Portfolio = () => {
     currentValue: 0
   });
   
-  // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   useEffect(() => {
     const fetchPortfolio = async () => {
       try {
@@ -44,8 +42,7 @@ const Portfolio = () => {
     
     fetchPortfolio();
   }, []);
-  
-  // Handle filter and sort
+
   const filteredAndSortedItems = portfolioItems
     .filter(item => filter === 'all' || item.assetType === filter)
     .sort((a, b) => {
@@ -66,11 +63,9 @@ const Portfolio = () => {
           return 0;
       }
     });
-  
-  // Calculate total portfolio value and allocation
+
   const totalValue = portfolioItems.reduce((sum, item) => sum + item.currentValue, 0);
-  
-  // Form handling
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -97,7 +92,7 @@ const Portfolio = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleAddItem = async () => {
     if (!validateForm()) {
       return;
@@ -118,7 +113,7 @@ const Portfolio = () => {
       console.error('Error adding portfolio item:', error);
     }
   };
-  
+
   const handleInputChange = (field: keyof typeof newItem, value: string | number) => {
     setNewItem(prev => ({
       ...prev,
@@ -126,7 +121,6 @@ const Portfolio = () => {
     }));
   };
 
-  // Generate historical data for performance chart (mock data)
   const generatePerformanceData = (item: PortfolioItem) => {
     const data = [];
     const now = new Date();
@@ -140,7 +134,6 @@ const Portfolio = () => {
       const date = new Date(purchaseDate.getFullYear(), purchaseDate.getMonth() + i, 1);
       const month = date.toLocaleString('default', { month: 'short' });
       
-      // Linear interpolation for mock data
       const progress = months === 0 ? 1 : i / months;
       const value = startValue + progress * (endValue - startValue);
       
@@ -149,7 +142,10 @@ const Portfolio = () => {
     
     return data;
   };
-  
+
+  const inr = (amount: number) => 
+    `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -161,9 +157,9 @@ const Portfolio = () => {
       </DashboardLayout>
     );
   }
-  
+
   const assetTypes: AssetType[] = ['Stock', 'Cryptocurrency', 'ETF', 'Real Estate', 'Bond', 'Other'];
-  
+
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
@@ -223,7 +219,7 @@ const Portfolio = () => {
               </div>
               
               <div>
-                <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
+                <Label htmlFor="purchasePrice">Purchase Price (₹)</Label>
                 <Input
                   id="purchasePrice"
                   type="number"
@@ -235,7 +231,7 @@ const Portfolio = () => {
               </div>
               
               <div>
-                <Label htmlFor="currentValue">Current Value ($)</Label>
+                <Label htmlFor="currentValue">Current Value (₹)</Label>
                 <Input
                   id="currentValue"
                   type="number"
@@ -264,7 +260,7 @@ const Portfolio = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <p className="text-sm text-gray-500 mb-1">Total Value</p>
-              <p className="text-2xl font-bold">${totalValue.toLocaleString()}</p>
+              <p className="text-2xl font-bold">{inr(totalValue)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Asset Allocation</p>
@@ -343,7 +339,81 @@ const Portfolio = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
-              {/* Dialog content - reused from above */}
+              <DialogHeader>
+                <DialogTitle>Add New Asset</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="assetName">Asset Name</Label>
+                  <Input
+                    id="assetName"
+                    value={newItem.assetName}
+                    onChange={(e) => handleInputChange('assetName', e.target.value)}
+                    className={errors.assetName ? 'border-red-500' : ''}
+                  />
+                  {errors.assetName && <p className="text-red-500 text-xs mt-1">{errors.assetName}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="assetType">Asset Type</Label>
+                  <Select
+                    value={newItem.assetType as string}
+                    onValueChange={(value) => handleInputChange('assetType', value)}
+                  >
+                    <SelectTrigger id="assetType" className={errors.assetType ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select asset type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assetTypes.map((type) => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.assetType && <p className="text-red-500 text-xs mt-1">{errors.assetType}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={newItem.quantity === 0 ? '' : newItem.quantity}
+                    onChange={(e) => handleInputChange('quantity', parseFloat(e.target.value) || 0)}
+                    className={errors.quantity ? 'border-red-500' : ''}
+                  />
+                  {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="purchasePrice">Purchase Price (₹)</Label>
+                  <Input
+                    id="purchasePrice"
+                    type="number"
+                    value={newItem.purchasePrice === 0 ? '' : newItem.purchasePrice}
+                    onChange={(e) => handleInputChange('purchasePrice', parseFloat(e.target.value) || 0)}
+                    className={errors.purchasePrice ? 'border-red-500' : ''}
+                  />
+                  {errors.purchasePrice && <p className="text-red-500 text-xs mt-1">{errors.purchasePrice}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="currentValue">Current Value (₹)</Label>
+                  <Input
+                    id="currentValue"
+                    type="number"
+                    value={newItem.currentValue === 0 ? '' : newItem.currentValue}
+                    onChange={(e) => handleInputChange('currentValue', parseFloat(e.target.value) || 0)}
+                    className={errors.currentValue ? 'border-red-500' : ''}
+                  />
+                  {errors.currentValue && <p className="text-red-500 text-xs mt-1">{errors.currentValue}</p>}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleAddItem} className="bg-finance-primary hover:bg-finance-primary/90">Add Asset</Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -384,26 +454,26 @@ const Portfolio = () => {
                         <div>
                           <p className="text-sm text-gray-500">Current Value</p>
                           <p className="text-lg font-semibold">
-                            ${item.currentValue.toLocaleString()}
+                            {inr(item.currentValue)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            ${(item.currentValue / item.quantity).toFixed(2)} per unit
+                            {inr(item.currentValue / item.quantity)} per unit
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Purchase Price</p>
                           <p className="text-lg font-semibold">
-                            ${(item.purchasePrice * item.quantity).toLocaleString()}
+                            {inr(item.purchasePrice * item.quantity)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            ${item.purchasePrice.toFixed(2)} per unit
+                            {inr(item.purchasePrice)} per unit
                           </p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-sm text-gray-500">Total Gain/Loss</p>
                           <div className="flex items-center">
                             <span className={`text-lg font-semibold ${gain >= 0 ? 'text-finance-success' : 'text-finance-danger'}`}>
-                              ${Math.abs(gain).toLocaleString()}
+                              {inr(Math.abs(gain))}
                             </span>
                             <div className={`ml-2 flex items-center ${gain >= 0 ? 'text-finance-success' : 'text-finance-danger'}`}>
                               {gain >= 0 ? (
@@ -439,10 +509,10 @@ const Portfolio = () => {
                               axisLine={false}
                               tickLine={false}
                               fontSize={10}
-                              tickFormatter={(value) => `$${value}`}
+                              tickFormatter={(value) => `₹${value.toLocaleString('en-IN')}`}
                             />
                             <Tooltip 
-                              formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
+                              formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Value']}
                             />
                             <Area 
                               type="monotone" 

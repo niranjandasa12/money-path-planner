@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ChartCard from '@/components/ChartCard';
@@ -47,7 +46,9 @@ const Dashboard = () => {
     );
   }
 
-  // Generate historical data (mock data)
+  const inr = (amount: number | undefined | null) => 
+    "₹" + (amount ? amount.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : "0");
+
   const generateHistoricalData = () => {
     const data = [];
     const now = new Date();
@@ -69,7 +70,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Portfolio Value Card */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -79,13 +79,12 @@ const Dashboard = () => {
           <CardContent>
             <div className="flex items-baseline">
               <span className="text-3xl font-bold text-gray-900">
-                ${summary?.totalValue.toLocaleString()}
+                {inr(summary?.totalValue)}
               </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Gains/Losses Card */}
         <Card className={`shadow-sm ${summary?.totalGains && summary.totalGains >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -95,7 +94,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="flex items-center">
               <span className={`text-3xl font-bold ${summary?.totalGains && summary.totalGains >= 0 ? 'text-finance-success' : 'text-finance-danger'}`}>
-                ${summary?.totalGains.toLocaleString()}
+                {inr(summary?.totalGains)}
               </span>
               <div className={`ml-2 flex items-center ${summary?.totalGains && summary.totalGains >= 0 ? 'text-finance-success' : 'text-finance-danger'}`}>
                 {summary?.totalGains && summary.totalGains >= 0 ? (
@@ -111,7 +110,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Goals Progress Card */}
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -131,7 +129,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Portfolio Value Over Time */}
         <ChartCard 
           title="Portfolio Value Over Time" 
           type="area" 
@@ -140,7 +137,6 @@ const Dashboard = () => {
           nameKey="name"
         />
 
-        {/* Asset Distribution */}
         <ChartCard 
           title="Asset Distribution" 
           type="pie" 
@@ -150,7 +146,6 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Goals Section */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Goals Progress</h2>
         <div className="grid grid-cols-1 gap-4">
@@ -169,10 +164,10 @@ const Dashboard = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium text-gray-900">{goal.name}</h3>
-                      <p className="text-sm text-gray-500">Target: ${goal.targetAmount.toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">Target: {inr(goal.targetAmount)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">${goal.currentAmount.toLocaleString()}</p>
+                      <p className="font-medium">{inr(goal.currentAmount)}</p>
                       <p className="text-sm text-gray-500">Deadline: {formattedDeadline}</p>
                     </div>
                   </div>

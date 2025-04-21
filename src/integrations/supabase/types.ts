@@ -48,6 +48,32 @@ export type Database = {
           },
         ]
       }
+      advisor_stats: {
+        Row: {
+          advisor_id: number
+          last_meeting_date: string | null
+          total_meetings: number | null
+        }
+        Insert: {
+          advisor_id: number
+          last_meeting_date?: string | null
+          total_meetings?: number | null
+        }
+        Update: {
+          advisor_id?: number
+          last_meeting_date?: string | null
+          total_meetings?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advisor_stats_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: true
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advisors: {
         Row: {
           email: string
@@ -71,6 +97,68 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      asset_distribution: {
+        Row: {
+          asset_type: string
+          id: number
+          percentage: number
+          total_value: number
+          updated_at: string | null
+          user_id: number | null
+        }
+        Insert: {
+          asset_type: string
+          id?: number
+          percentage: number
+          total_value: number
+          updated_at?: string | null
+          user_id?: number | null
+        }
+        Update: {
+          asset_type?: string
+          id?: number
+          percentage?: number
+          total_value?: number
+          updated_at?: string | null
+          user_id?: number | null
+        }
+        Relationships: []
+      }
+      goal_achievements: {
+        Row: {
+          achieved_amount: number
+          achievement_date: string | null
+          goal_id: number | null
+          id: number
+          target_amount: number
+          user_id: number | null
+        }
+        Insert: {
+          achieved_amount: number
+          achievement_date?: string | null
+          goal_id?: number | null
+          id?: number
+          target_amount: number
+          user_id?: number | null
+        }
+        Update: {
+          achieved_amount?: number
+          achievement_date?: string | null
+          goal_id?: number | null
+          id?: number
+          target_amount?: number
+          user_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_achievements_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: true
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       goals: {
         Row: {
@@ -151,6 +239,36 @@ export type Database = {
           },
         ]
       }
+      transaction_audit_log: {
+        Row: {
+          action: string
+          changed_at: string | null
+          id: number
+          new_data: Json | null
+          old_data: Json | null
+          transaction_id: number | null
+          user_id: number | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string | null
+          id?: number
+          new_data?: Json | null
+          old_data?: Json | null
+          transaction_id?: number | null
+          user_id?: number | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string | null
+          id?: number
+          new_data?: Json | null
+          old_data?: Json | null
+          transaction_id?: number | null
+          user_id?: number | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           asset_name: string | null
@@ -191,6 +309,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_activity_log: {
+        Row: {
+          activity_time: string | null
+          activity_type: string
+          id: number
+          ip_address: string | null
+          user_agent: string | null
+          user_id: number | null
+        }
+        Insert: {
+          activity_time?: string | null
+          activity_type: string
+          id?: number
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: number | null
+        }
+        Update: {
+          activity_time?: string | null
+          activity_type?: string
+          id?: number
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: number | null
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          last_transaction_date: string | null
+          last_transaction_type: string | null
+          total_transactions: number | null
+          updated_at: string | null
+          user_id: number
+        }
+        Insert: {
+          last_transaction_date?: string | null
+          last_transaction_type?: string | null
+          total_transactions?: number | null
+          updated_at?: string | null
+          user_id: number
+        }
+        Update: {
+          last_transaction_date?: string | null
+          last_transaction_type?: string | null
+          total_transactions?: number | null
+          updated_at?: string | null
+          user_id?: number
+        }
+        Relationships: []
       }
       users: {
         Row: {
