@@ -28,6 +28,7 @@ const AdvisorPage = () => {
     date: new Date().toISOString(),
     topic: ''
   });
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<
     { id: number; sender: 'user' | 'advisor'; text: string; timestamp: string }[]
@@ -73,6 +74,7 @@ const AdvisorPage = () => {
         date: new Date().toISOString(),
         topic: ''
       });
+      setIsScheduleDialogOpen(false); // Close dialog on success
     },
     onError: (error) => {
       toast.error(`Failed to schedule meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -110,13 +112,16 @@ const AdvisorPage = () => {
       newErrors.date = 'Date and time are required';
     } else {
       const meetingDate = new Date(newMeeting.date);
-      const today = new Date();
-      if (meetingDate <= today) {
+      const now = new Date();
+      // Reset time components for proper comparison
+      now.setHours(0, 0, 0, 0);
+      meetingDate.setHours(0, 0, 0, 0);
+      if (meetingDate < now) {
         newErrors.date = 'Meeting date must be in the future';
       }
     }
     
-    if (!newMeeting.topic) {
+    if (!newMeeting.topic || newMeeting.topic.trim() === '') {
       newErrors.topic = 'Topic is required';
     }
     
@@ -124,12 +129,22 @@ const AdvisorPage = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleScheduleMeeting = async () => {
+  const handleScheduleMeeting = () => {
+    console.log("Scheduling meeting with data:", newMeeting);
     if (!validateMeetingForm()) {
+      console.log("Form validation failed with errors:", errors);
       return;
     }
     
-    scheduleMeetingMutation.mutate(newMeeting as Omit<AdvisorMeeting, "id" | "userId" | "advisor">);
+    // Ensure the meeting has all required properties before submission
+    const meetingToSchedule: Omit<AdvisorMeeting, "id" | "userId" | "advisor"> = {
+      advisorId: newMeeting.advisorId as number,
+      date: newMeeting.date as string,
+      topic: newMeeting.topic as string
+    };
+    
+    console.log("Submitting meeting to API:", meetingToSchedule);
+    scheduleMeetingMutation.mutate(meetingToSchedule);
   };
   
   const handleCancelMeeting = async (id: number) => {
@@ -191,6 +206,73 @@ const AdvisorPage = () => {
     .filter(meeting => new Date(meeting.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
+  // Create the meeting dialog content
+  const scheduleDialogContent = (
+    <DialogContent className="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>Schedule Advisor Meeting</DialogTitle>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        <div>
+          <Label htmlFor="advisor">Select Advisor</Label>
+          <Select
+            value={newMeeting.advisorId?.toString()}
+            onValueChange={(value) => setNewMeeting(prev => ({ ...prev, advisorId: parseInt(value) }))}
+          >
+            <SelectTrigger id="advisor" className={errors.advisorId ? 'border-red-500' : ''}>
+              <SelectValue placeholder="Select advisor" />
+            </SelectTrigger>
+            <SelectContent>
+              {advisors.map((advisor) => (
+                <SelectItem key={advisor.id} value={advisor.id.toString()}>
+                  {advisor.name} - {advisor.expertise}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.advisorId && <p className="text-red-500 text-xs mt-1">{errors.advisorId}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="date">Date and Time</Label>
+          <Input
+            id="date"
+            type="datetime-local"
+            value={newMeeting.date ? new Date(newMeeting.date).toISOString().slice(0, 16) : ''}
+            onChange={(e) => {
+              const date = new Date(e.target.value);
+              if (!isNaN(date.getTime())) {
+                setNewMeeting(prev => ({ ...prev, date: date.toISOString() }));
+              }
+            }}
+            className={errors.date ? 'border-red-500' : ''}
+          />
+          {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="topic">Meeting Topic</Label>
+          <Input
+            id="topic"
+            value={newMeeting.topic || ''}
+            onChange={(e) => setNewMeeting(prev => ({ ...prev, topic: e.target.value }))}
+            className={errors.topic ? 'border-red-500' : ''}
+            placeholder="e.g., Retirement Planning, Investment Strategy"
+          />
+          {errors.topic && <p className="text-red-500 text-xs mt-1">{errors.topic}</p>}
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
+          Cancel
+        </Button>
+        <Button onClick={handleScheduleMeeting} className="bg-finance-primary hover:bg-finance-primary/90">
+          Schedule Meeting
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+  
   return (
     <DashboardLayout>
       <div className="mb-6">
@@ -246,72 +328,13 @@ const AdvisorPage = () => {
                 <div className="text-center py-6">
                   <Calendar className="h-10 w-10 mx-auto text-gray-400" />
                   <p className="mt-2 text-gray-500">No upcoming meetings</p>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button className="mt-4 bg-finance-primary hover:bg-finance-primary/90">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Schedule Meeting
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Schedule Advisor Meeting</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div>
-                          <Label htmlFor="advisor">Select Advisor</Label>
-                          <Select
-                            value={newMeeting.advisorId?.toString()}
-                            onValueChange={(value) => setNewMeeting(prev => ({ ...prev, advisorId: parseInt(value) }))}
-                          >
-                            <SelectTrigger id="advisor" className={errors.advisorId ? 'border-red-500' : ''}>
-                              <SelectValue placeholder="Select advisor" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {advisors.map((advisor) => (
-                                <SelectItem key={advisor.id} value={advisor.id.toString()}>
-                                  {advisor.name} - {advisor.expertise}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {errors.advisorId && <p className="text-red-500 text-xs mt-1">{errors.advisorId}</p>}
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="date">Date and Time</Label>
-                          <Input
-                            id="date"
-                            type="datetime-local"
-                            value={newMeeting.date ? new Date(newMeeting.date).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => setNewMeeting(prev => ({ ...prev, date: new Date(e.target.value).toISOString() }))}
-                            className={errors.date ? 'border-red-500' : ''}
-                          />
-                          {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="topic">Meeting Topic</Label>
-                          <Input
-                            id="topic"
-                            value={newMeeting.topic}
-                            onChange={(e) => setNewMeeting(prev => ({ ...prev, topic: e.target.value }))}
-                            className={errors.topic ? 'border-red-500' : ''}
-                            placeholder="e.g., Retirement Planning, Investment Strategy"
-                          />
-                          {errors.topic && <p className="text-red-500 text-xs mt-1">{errors.topic}</p>}
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button onClick={handleScheduleMeeting} className="bg-finance-primary hover:bg-finance-primary/90">
-                          Schedule Meeting
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    className="mt-4 bg-finance-primary hover:bg-finance-primary/90"
+                    onClick={() => setIsScheduleDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schedule Meeting
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -368,17 +391,13 @@ const AdvisorPage = () => {
                     </div>
                   ))}
                   
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button className="w-full bg-finance-primary hover:bg-finance-primary/90">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Schedule Another Meeting
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      {/* Dialog content - reused from above */}
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    className="w-full bg-finance-primary hover:bg-finance-primary/90"
+                    onClick={() => setIsScheduleDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schedule Another Meeting
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -454,17 +473,20 @@ const AdvisorPage = () => {
                       </div>
                     </div>
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button className="bg-finance-primary hover:bg-finance-primary/90">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Schedule Meeting with {selectedAdvisor.name.split(' ')[0]}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px]">
-                        {/* Dialog content - reused from above */}
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      className="bg-finance-primary hover:bg-finance-primary/90"
+                      onClick={() => {
+                        setNewMeeting({
+                          advisorId: selectedAdvisor.id,
+                          date: new Date().toISOString(),
+                          topic: ''
+                        });
+                        setIsScheduleDialogOpen(true);
+                      }}
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Schedule Meeting with {selectedAdvisor.name.split(' ')[0]}
+                    </Button>
                   </TabsContent>
                   
                   <TabsContent value="chat" className="flex-1 flex flex-col space-y-4">
@@ -528,6 +550,11 @@ const AdvisorPage = () => {
           )}
         </div>
       </div>
+      
+      {/* Dialog for scheduling meetings */}
+      <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
+        {scheduleDialogContent}
+      </Dialog>
     </DashboardLayout>
   );
 };
