@@ -25,13 +25,11 @@ const Goals = () => {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Query goals data
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals'],
     queryFn: supabaseGoalService.getGoals
   });
 
-  // Mutations
   const addGoalMutation = useMutation({
     mutationFn: supabaseGoalService.addGoal,
     onSuccess: () => {
@@ -61,7 +59,6 @@ const Goals = () => {
     }
   });
 
-  // Form handling
   const validateForm = (goal: Partial<Goal>) => {
     const newErrors: Record<string, string> = {};
     
@@ -184,27 +181,27 @@ const Goals = () => {
               </div>
               
               <div>
-                <Label htmlFor="targetAmount">Target Amount ($)</Label>
+                <Label htmlFor="targetAmount">Target Amount (₹)</Label>
                 <Input
                   id="targetAmount"
                   type="number"
                   value={newGoal.targetAmount === 0 ? '' : newGoal.targetAmount}
                   onChange={(e) => handleInputChange('targetAmount', parseFloat(e.target.value) || 0)}
                   className={errors.targetAmount ? 'border-red-500' : ''}
-                  placeholder="e.g., 10000"
+                  placeholder="e.g., 100000"
                 />
                 {errors.targetAmount && <p className="text-red-500 text-xs mt-1">{errors.targetAmount}</p>}
               </div>
               
               <div>
-                <Label htmlFor="currentAmount">Current Amount ($)</Label>
+                <Label htmlFor="currentAmount">Current Amount (₹)</Label>
                 <Input
                   id="currentAmount"
                   type="number"
                   value={newGoal.currentAmount === 0 ? '0' : newGoal.currentAmount}
                   onChange={(e) => handleInputChange('currentAmount', parseFloat(e.target.value) || 0)}
                   className={errors.currentAmount ? 'border-red-500' : ''}
-                  placeholder="e.g., 2500"
+                  placeholder="e.g., 25000"
                 />
                 {errors.currentAmount && <p className="text-red-500 text-xs mt-1">{errors.currentAmount}</p>}
               </div>
@@ -265,27 +262,27 @@ const Goals = () => {
                 </div>
                 
                 <div>
-                  <Label htmlFor="targetAmount">Target Amount ($)</Label>
+                  <Label htmlFor="targetAmount">Target Amount (₹)</Label>
                   <Input
                     id="targetAmount"
                     type="number"
                     value={newGoal.targetAmount === 0 ? '' : newGoal.targetAmount}
                     onChange={(e) => handleInputChange('targetAmount', parseFloat(e.target.value) || 0)}
                     className={errors.targetAmount ? 'border-red-500' : ''}
-                    placeholder="e.g., 10000"
+                    placeholder="e.g., 100000"
                   />
                   {errors.targetAmount && <p className="text-red-500 text-xs mt-1">{errors.targetAmount}</p>}
                 </div>
                 
                 <div>
-                  <Label htmlFor="currentAmount">Current Amount ($)</Label>
+                  <Label htmlFor="currentAmount">Current Amount (₹)</Label>
                   <Input
                     id="currentAmount"
                     type="number"
                     value={newGoal.currentAmount === 0 ? '0' : newGoal.currentAmount}
                     onChange={(e) => handleInputChange('currentAmount', parseFloat(e.target.value) || 0)}
                     className={errors.currentAmount ? 'border-red-500' : ''}
-                    placeholder="e.g., 2500"
+                    placeholder="e.g., 25000"
                   />
                   {errors.currentAmount && <p className="text-red-500 text-xs mt-1">{errors.currentAmount}</p>}
                 </div>
@@ -353,7 +350,7 @@ const Goals = () => {
                               </div>
                               
                               <div>
-                                <Label htmlFor="edit-targetAmount">Target Amount ($)</Label>
+                                <Label htmlFor="edit-targetAmount">Target Amount (₹)</Label>
                                 <Input
                                   id="edit-targetAmount"
                                   type="number"
@@ -365,7 +362,7 @@ const Goals = () => {
                               </div>
                               
                               <div>
-                                <Label htmlFor="edit-currentAmount">Current Amount ($)</Label>
+                                <Label htmlFor="edit-currentAmount">Current Amount (₹)</Label>
                                 <Input
                                   id="edit-currentAmount"
                                   type="number"
@@ -443,7 +440,7 @@ const Goals = () => {
                           <DollarSign className="h-4 w-4 text-gray-500 mr-1" />
                           <span className="text-xs text-gray-500">Saved</span>
                         </div>
-                        <p className="text-lg font-semibold mt-1">${goal.currentAmount.toLocaleString()}</p>
+                        <p className="text-lg font-semibold mt-1">₹{goal.currentAmount.toLocaleString()}</p>
                       </div>
                       
                       <div className="bg-gray-50 p-3 rounded-md">
@@ -451,7 +448,7 @@ const Goals = () => {
                           <DollarSign className="h-4 w-4 text-gray-500 mr-1" />
                           <span className="text-xs text-gray-500">Target</span>
                         </div>
-                        <p className="text-lg font-semibold mt-1">${goal.targetAmount.toLocaleString()}</p>
+                        <p className="text-lg font-semibold mt-1">₹{goal.targetAmount.toLocaleString()}</p>
                       </div>
                       
                       <div className="bg-gray-50 p-3 rounded-md">
@@ -459,7 +456,7 @@ const Goals = () => {
                           <DollarSign className="h-4 w-4 text-gray-500 mr-1" />
                           <span className="text-xs text-gray-500">Remaining</span>
                         </div>
-                        <p className="text-lg font-semibold mt-1">${remaining.toLocaleString()}</p>
+                        <p className="text-lg font-semibold mt-1">₹{remaining.toLocaleString()}</p>
                       </div>
                       
                       <div className="bg-gray-50 p-3 rounded-md">

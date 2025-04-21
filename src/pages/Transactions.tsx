@@ -314,8 +314,8 @@ const Transactions = () => {
               <div>
                 <Label htmlFor="price">
                   {newTransaction.type === 'Buy' || newTransaction.type === 'Sell' 
-                    ? 'Price per Unit ($)' 
-                    : 'Amount ($)'}
+                    ? 'Price per Unit (₹)' 
+                    : 'Amount (₹)'}
                 </Label>
                 <Input
                   id="price"
@@ -323,6 +323,11 @@ const Transactions = () => {
                   value={newTransaction.price === 0 ? '' : newTransaction.price}
                   onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                   className={errors.price ? 'border-red-500' : ''}
+                  placeholder={
+                    newTransaction.type === 'Buy' || newTransaction.type === 'Sell'
+                      ? "Price per unit in ₹"
+                      : "Amount in ₹"
+                  }
                 />
                 {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
               </div>
@@ -471,8 +476,8 @@ const Transactions = () => {
                 <div>
                   <Label htmlFor="price">
                     {newTransaction.type === 'Buy' || newTransaction.type === 'Sell' 
-                      ? 'Price per Unit ($)' 
-                      : 'Amount ($)'}
+                      ? 'Price per Unit (₹)' 
+                      : 'Amount (₹)'}
                   </Label>
                   <Input
                     id="price"
@@ -480,6 +485,11 @@ const Transactions = () => {
                     value={newTransaction.price === 0 ? '' : newTransaction.price}
                     onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                     className={errors.price ? 'border-red-500' : ''}
+                    placeholder={
+                      newTransaction.type === 'Buy' || newTransaction.type === 'Sell'
+                        ? "Price per unit in ₹"
+                        : "Amount in ₹"
+                    }
                   />
                   {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
                 </div>
@@ -543,11 +553,11 @@ const Transactions = () => {
                       </TableCell>
                       <TableCell>{transaction.assetName || '-'}</TableCell>
                       <TableCell>{transaction.quantity || '-'}</TableCell>
-                      <TableCell>${transaction.price?.toLocaleString() || 0}</TableCell>
+                      <TableCell>₹{transaction.price?.toLocaleString() || 0}</TableCell>
                       <TableCell>
                         {transaction.quantity 
-                          ? `$${(transaction.price * transaction.quantity).toLocaleString()}`
-                          : `$${transaction.price?.toLocaleString() || 0}`
+                          ? `₹${(transaction.price * transaction.quantity).toLocaleString()}`
+                          : `₹${transaction.price?.toLocaleString() || 0}`
                         }
                       </TableCell>
                       <TableCell>
@@ -646,8 +656,8 @@ const Transactions = () => {
                                   <div>
                                     <Label htmlFor="edit-price">
                                       {editingTransaction.type === 'Buy' || editingTransaction.type === 'Sell' 
-                                        ? 'Price per Unit ($)' 
-                                        : 'Amount ($)'}
+                                        ? 'Price per Unit (₹)' 
+                                        : 'Amount (₹)'}
                                     </Label>
                                     <Input
                                       id="edit-price"
