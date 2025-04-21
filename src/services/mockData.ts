@@ -11,7 +11,7 @@ import {
 
 // Mock user data
 export const currentUser: User = {
-  id: 1,
+  id: '1',  // Changed from number 1 to string '1'
   fullName: 'John Smith',
   email: 'john@example.com'
 };
