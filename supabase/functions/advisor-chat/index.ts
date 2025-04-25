@@ -40,13 +40,27 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
 
+    const data = await response.json();
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error in advisor-chat function:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      // Add a mock structure so the frontend doesn't crash
+      choices: [{
+        message: {
+          content: "I'm sorry, I encountered an error processing your request. Please try again later."
+        }
+      }]
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -154,24 +154,37 @@ const AdvisorPage = () => {
     };
     
     setChatMessages(prev => [...prev, userMessage]);
-    setConversationHistory(prev => [...prev, { role: 'user', content: chatMessage.trim() }]);
+    const updatedConversationHistory = [...conversationHistory, { role: 'user', content: chatMessage.trim() }];
+    setConversationHistory(updatedConversationHistory);
     
     const currentMessage = chatMessage.trim();
     setChatMessage('');
     setChatLoading(true);
     
     try {
+      console.log("Sending chat request to edge function");
       const response = await fetch('https://uocqgeahfighgfnkwhyw.supabase.co/functions/v1/advisor-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...conversationHistory, { role: 'user', content: currentMessage }]
+          messages: updatedConversationHistory
         }),
       });
       
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log("API response:", data);
+      
+      if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error("Unexpected response format:", data);
+        throw new Error("Unexpected response format from API");
+      }
+      
       const aiResponse = data.choices[0].message;
       
       setConversationHistory(prev => [...prev, { role: 'assistant', content: aiResponse.content }]);
