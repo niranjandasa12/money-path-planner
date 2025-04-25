@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -21,7 +20,6 @@ import { toast } from 'sonner';
 const AdvisorPage = () => {
   const queryClient = useQueryClient();
   
-  // State for UI
   const [selectedAdvisor, setSelectedAdvisor] = useState<Advisor | null>(null);
   const [newMeeting, setNewMeeting] = useState<Partial<AdvisorMeeting>>({
     advisorId: 0,
@@ -33,7 +31,6 @@ const AdvisorPage = () => {
   const [chatMessages, setChatMessages] = useState<
     { id: number; sender: 'user' | 'advisor'; text: string; timestamp: string }[]
   >([
-    // Initial demo messages
     {
       id: 1,
       sender: 'advisor',
@@ -41,11 +38,11 @@ const AdvisorPage = () => {
       timestamp: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
     }
   ]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
   
-  // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Queries
   const { 
     data: advisors = [], 
     isLoading: advisorsLoading 
@@ -62,7 +59,6 @@ const AdvisorPage = () => {
     queryFn: () => advisorService.getAdvisorMeetings(),
   });
 
-  // Mutations
   const scheduleMeetingMutation = useMutation({
     mutationFn: (meetingData: Omit<AdvisorMeeting, "id" | "userId" | "advisor">) => 
       advisorService.scheduleAdvisorMeeting(meetingData),
@@ -74,7 +70,7 @@ const AdvisorPage = () => {
         date: new Date().toISOString(),
         topic: ''
       });
-      setIsScheduleDialogOpen(false); // Close dialog on success
+      setIsScheduleDialogOpen(false);
     },
     onError: (error) => {
       toast.error(`Failed to schedule meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -92,7 +88,6 @@ const AdvisorPage = () => {
     }
   });
   
-  // Set initial selected advisor
   useEffect(() => {
     if (advisors.length > 0 && !selectedAdvisor) {
       setSelectedAdvisor(advisors[0]);
@@ -100,7 +95,6 @@ const AdvisorPage = () => {
     }
   }, [advisors, selectedAdvisor]);
   
-  // Form handling
   const validateMeetingForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -113,7 +107,6 @@ const AdvisorPage = () => {
     } else {
       const meetingDate = new Date(newMeeting.date);
       const now = new Date();
-      // Reset time components for proper comparison
       now.setHours(0, 0, 0, 0);
       meetingDate.setHours(0, 0, 0, 0);
       if (meetingDate < now) {
@@ -136,7 +129,6 @@ const AdvisorPage = () => {
       return;
     }
     
-    // Ensure the meeting has all required properties before submission
     const meetingToSchedule: Omit<AdvisorMeeting, "id" | "userId" | "advisor"> = {
       advisorId: newMeeting.advisorId as number,
       date: newMeeting.date as string,
@@ -151,31 +143,62 @@ const AdvisorPage = () => {
     cancelMeetingMutation.mutate(id);
   };
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatMessage.trim() || !selectedAdvisor) return;
     
-    // Add user message
     const userMessage = {
       id: Date.now(),
       sender: 'user' as const,
-      text: chatMessage,
+      text: chatMessage.trim(),
       timestamp: new Date().toISOString()
     };
     
     setChatMessages(prev => [...prev, userMessage]);
-    setChatMessage('');
+    setConversationHistory(prev => [...prev, { role: 'user', content: chatMessage.trim() }]);
     
-    // Simulate advisor response after a short delay
-    setTimeout(() => {
+    const currentMessage = chatMessage.trim();
+    setChatMessage('');
+    setChatLoading(true);
+    
+    try {
+      const response = await fetch('https://uocqgeahfighgfnkwhyw.supabase.co/functions/v1/advisor-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...conversationHistory, { role: 'user', content: currentMessage }]
+        }),
+      });
+      
+      const data = await response.json();
+      const aiResponse = data.choices[0].message;
+      
+      setConversationHistory(prev => [...prev, { role: 'assistant', content: aiResponse.content }]);
+      
       const advisorResponse = {
         id: Date.now() + 1,
         sender: 'advisor' as const,
-        text: `Thanks for your message. As your financial advisor, I'm here to help. Can you provide more details about your financial goals?`,
+        text: aiResponse.content,
         timestamp: new Date().toISOString()
       };
       
       setChatMessages(prev => [...prev, advisorResponse]);
-    }, 1000);
+    } catch (error) {
+      console.error('Error in AI chat:', error);
+      toast.error('Failed to get AI response. Please try again.');
+      
+      const errorMessage = {
+        id: Date.now() + 1,
+        sender: 'advisor' as const,
+        text: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toISOString()
+      };
+      
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setChatLoading(false);
+    }
   };
   
   const formatMeetingDate = (dateString: string) => {
@@ -206,7 +229,6 @@ const AdvisorPage = () => {
     .filter(meeting => new Date(meeting.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
-  // Create the meeting dialog content
   const scheduleDialogContent = (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
@@ -280,7 +302,6 @@ const AdvisorPage = () => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Advisor Profiles Section */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="shadow-sm">
             <CardHeader>
@@ -404,7 +425,6 @@ const AdvisorPage = () => {
           </Card>
         </div>
         
-        {/* Advisor Details & Chat Section */}
         <div className="lg:col-span-2">
           {selectedAdvisor ? (
             <Card className="shadow-sm h-full flex flex-col">
@@ -524,13 +544,19 @@ const AdvisorPage = () => {
                             handleSendMessage();
                           }
                         }}
+                        disabled={chatLoading}
                       />
                       <Button 
                         onClick={handleSendMessage}
                         size="icon"
                         className="bg-finance-primary hover:bg-finance-primary/90"
+                        disabled={chatLoading}
                       >
-                        <Send className="h-4 w-4" />
+                        {chatLoading ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </TabsContent>
@@ -551,7 +577,6 @@ const AdvisorPage = () => {
         </div>
       </div>
       
-      {/* Dialog for scheduling meetings */}
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
         {scheduleDialogContent}
       </Dialog>
