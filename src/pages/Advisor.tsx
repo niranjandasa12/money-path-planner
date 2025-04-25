@@ -17,6 +17,18 @@ import { Calendar, User, Mail, Briefcase, Plus, Trash2, Send } from 'lucide-reac
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+type ChatMessage = {
+  id: number;
+  sender: 'user' | 'advisor';
+  text: string;
+  timestamp: string;
+};
+
+type ConversationMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 const AdvisorPage = () => {
   const queryClient = useQueryClient();
   
@@ -28,9 +40,7 @@ const AdvisorPage = () => {
   });
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState<
-    { id: number; sender: 'user' | 'advisor'; text: string; timestamp: string }[]
-  >([
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 1,
       sender: 'advisor',
@@ -39,7 +49,7 @@ const AdvisorPage = () => {
     }
   ]);
   const [chatLoading, setChatLoading] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -146,15 +156,15 @@ const AdvisorPage = () => {
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || !selectedAdvisor) return;
     
-    const userMessage = {
+    const userMessage: ChatMessage = {
       id: Date.now(),
-      sender: 'user' as const,
+      sender: 'user',
       text: chatMessage.trim(),
       timestamp: new Date().toISOString()
     };
     
     setChatMessages(prev => [...prev, userMessage]);
-    const updatedConversationHistory = [...conversationHistory, { role: 'user', content: chatMessage.trim() }];
+    const updatedConversationHistory: ConversationMessage[] = [...conversationHistory, { role: 'user', content: chatMessage.trim() }];
     setConversationHistory(updatedConversationHistory);
     
     const currentMessage = chatMessage.trim();
@@ -187,11 +197,11 @@ const AdvisorPage = () => {
       
       const aiResponse = data.choices[0].message;
       
-      setConversationHistory(prev => [...prev, { role: 'assistant', content: aiResponse.content }]);
+      setConversationHistory(prev => [...prev, { role: 'assistant' as const, content: aiResponse.content }]);
       
-      const advisorResponse = {
+      const advisorResponse: ChatMessage = {
         id: Date.now() + 1,
-        sender: 'advisor' as const,
+        sender: 'advisor',
         text: aiResponse.content,
         timestamp: new Date().toISOString()
       };
@@ -201,9 +211,9 @@ const AdvisorPage = () => {
       console.error('Error in AI chat:', error);
       toast.error('Failed to get AI response. Please try again.');
       
-      const errorMessage = {
+      const errorMessage: ChatMessage = {
         id: Date.now() + 1,
-        sender: 'advisor' as const,
+        sender: 'advisor',
         text: 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date().toISOString()
       };
