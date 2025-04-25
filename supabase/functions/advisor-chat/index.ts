@@ -18,9 +18,12 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openAIApiKey) {
+      console.error('OPENAI_API_KEY is not set');
       throw new Error('OPENAI_API_KEY is not set');
     }
 
+    console.log('Making request to OpenAI with API key');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -43,7 +46,7 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || response.status}`);
     }
 
     const data = await response.json();
@@ -54,7 +57,6 @@ serve(async (req) => {
     console.error('Error in advisor-chat function:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
-      // Add a mock structure so the frontend doesn't crash
       choices: [{
         message: {
           content: "I'm sorry, I encountered an error processing your request. Please try again later."

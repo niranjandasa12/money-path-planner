@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -164,7 +165,8 @@ const AdvisorPage = () => {
     };
     
     setChatMessages(prev => [...prev, userMessage]);
-    const updatedConversationHistory: ConversationMessage[] = [...conversationHistory, { role: 'user', content: chatMessage.trim() }];
+    const newConvoMessage: ConversationMessage = { role: 'user', content: chatMessage.trim() };
+    const updatedConversationHistory: ConversationMessage[] = [...conversationHistory, newConvoMessage];
     setConversationHistory(updatedConversationHistory);
     
     const currentMessage = chatMessage.trim();
@@ -184,6 +186,7 @@ const AdvisorPage = () => {
       });
       
       if (!response.ok) {
+        console.error(`API responded with status: ${response.status}`);
         throw new Error(`API responded with status: ${response.status}`);
       }
       
@@ -196,8 +199,12 @@ const AdvisorPage = () => {
       }
       
       const aiResponse = data.choices[0].message;
+      const newAssistantMessage: ConversationMessage = { 
+        role: 'assistant', 
+        content: aiResponse.content 
+      };
       
-      setConversationHistory(prev => [...prev, { role: 'assistant' as const, content: aiResponse.content }]);
+      setConversationHistory(prev => [...prev, newAssistantMessage]);
       
       const advisorResponse: ChatMessage = {
         id: Date.now() + 1,
