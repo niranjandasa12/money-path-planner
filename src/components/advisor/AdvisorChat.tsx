@@ -30,8 +30,8 @@ const AdvisorChat = ({ advisor }: AdvisorChatProps) => {
     {
       id: 1,
       sender: 'advisor',
-      text: 'Hello! How can I help you with your financial planning today?',
-      timestamp: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+      text: `Hello! I'm ${advisor.name}. How can I help you with your financial planning today?`,
+      timestamp: new Date().toISOString()
     }
   ]);
   const [chatLoading, setChatLoading] = useState(false);
@@ -62,14 +62,25 @@ const AdvisorChat = ({ advisor }: AdvisorChatProps) => {
     setChatLoading(true);
     
     try {
-      console.log("Sending chat request to edge function with messages:", JSON.stringify(updatedConversationHistory));
+      // Add system message about the advisor context for better AI responses
+      const systemContext = `You are ${advisor.name}, a financial advisor specializing in ${advisor.expertise}. Provide helpful, professional financial advice.`;
+      
+      console.log("Sending chat request with messages:", JSON.stringify([
+        { role: 'system', content: systemContext },
+        ...updatedConversationHistory
+      ]));
+      
       const response = await fetch('https://uocqgeahfighgfnkwhyw.supabase.co/functions/v1/advisor-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvY3FnZWFoZmlnaGdmbmt3aHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDUzMjk2MDAsImV4cCI6MjAyMDkwNTYwMH0.m7pxBg5hdVpa6JseSgyqcJeDqKrWEnWPzK4LU9A2oTw'
         },
         body: JSON.stringify({
-          messages: updatedConversationHistory
+          messages: [
+            { role: 'system', content: systemContext },
+            ...updatedConversationHistory
+          ]
         }),
       });
       
@@ -82,8 +93,16 @@ const AdvisorChat = ({ advisor }: AdvisorChatProps) => {
       console.log("API response:", data);
       
       if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
-        console.error("Unexpected response format:", data);
-        throw new Error("Unexpected response format from API");
+        // Fallback response in case of unexpected API response format
+        const fallbackResponse: ChatMessage = {
+          id: Date.now() + 1,
+          sender: 'advisor',
+          text: `As ${advisor.name}, I'm here to help with your ${advisor.expertise.toLowerCase()} needs. Could you please try again with your question?`,
+          timestamp: new Date().toISOString()
+        };
+        
+        setChatMessages(prev => [...prev, fallbackResponse]);
+        return;
       }
       
       const aiResponse = data.choices[0].message;
@@ -109,7 +128,7 @@ const AdvisorChat = ({ advisor }: AdvisorChatProps) => {
       const errorMessage: ChatMessage = {
         id: Date.now() + 1,
         sender: 'advisor',
-        text: 'Sorry, I encountered an error. Please try again.',
+        text: `I apologize for the technical difficulties. As ${advisor.name}, I'd be happy to continue our conversation shortly.`,
         timestamp: new Date().toISOString()
       };
       

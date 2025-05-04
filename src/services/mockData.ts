@@ -1,4 +1,3 @@
-
 import {
   User,
   PortfolioItem,
@@ -212,28 +211,28 @@ export const goals: Goal[] = [
   }
 ];
 
-// Mock advisors data
+// Mock advisors data with Indian names
 export const advisors: Advisor[] = [
   {
     id: 1,
-    name: 'Sarah Johnson',
-    email: 'sarah@financialadvisor.com',
+    name: 'Arjun Sharma',
+    email: 'arjun@financialadvisor.com',
     expertise: 'Retirement Planning',
-    imageUrl: 'https://randomuser.me/api/portraits/women/45.jpg'
+    imageUrl: 'https://randomuser.me/api/portraits/men/45.jpg'
   },
   {
     id: 2,
-    name: 'Michael Chen',
-    email: 'michael@financialadvisor.com',
+    name: 'Priya Patel',
+    email: 'priya@financialadvisor.com',
     expertise: 'Tax Strategy',
-    imageUrl: 'https://randomuser.me/api/portraits/men/22.jpg'
+    imageUrl: 'https://randomuser.me/api/portraits/women/22.jpg'
   },
   {
     id: 3,
-    name: 'Emma Wilson',
-    email: 'emma@financialadvisor.com',
+    name: 'Vikram Mehta',
+    email: 'vikram@financialadvisor.com',
     expertise: 'Real Estate Investment',
-    imageUrl: 'https://randomuser.me/api/portraits/women/33.jpg'
+    imageUrl: 'https://randomuser.me/api/portraits/men/33.jpg'
   }
 ];
 
