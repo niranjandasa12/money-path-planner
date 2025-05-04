@@ -19,10 +19,20 @@ serve(async (req) => {
 
     if (!openAIApiKey) {
       console.error('OPENAI_API_KEY is not set');
-      throw new Error('OPENAI_API_KEY is not set');
+      return new Response(JSON.stringify({ 
+        error: 'OPENAI_API_KEY is not set',
+        choices: [{
+          message: {
+            content: "I'm sorry, I cannot process your request because the API key is not configured. Please contact support."
+          }
+        }]
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log('Making request to OpenAI with API key');
+    console.log('Making request to OpenAI with messages:', JSON.stringify(messages));
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -46,10 +56,21 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || response.status}`);
+      return new Response(JSON.stringify({ 
+        error: `OpenAI API error: ${errorData.error?.message || response.status}`,
+        choices: [{
+          message: {
+            content: "I'm sorry, I encountered an error processing your request. Please try again later."
+          }
+        }]
+      }), {
+        status: response.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
+    console.log('OpenAI API response:', JSON.stringify(data));
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

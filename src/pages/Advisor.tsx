@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -18,6 +17,7 @@ import { Calendar, User, Mail, Briefcase, Plus, Trash2, Send } from 'lucide-reac
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+// Define proper types for chat messages
 type ChatMessage = {
   id: number;
   sender: 'user' | 'advisor';
@@ -174,7 +174,7 @@ const AdvisorPage = () => {
     setChatLoading(true);
     
     try {
-      console.log("Sending chat request to edge function");
+      console.log("Sending chat request to edge function with messages:", JSON.stringify(updatedConversationHistory));
       const response = await fetch('https://uocqgeahfighgfnkwhyw.supabase.co/functions/v1/advisor-chat', {
         method: 'POST',
         headers: {

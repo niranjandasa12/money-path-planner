@@ -90,6 +90,20 @@ export const advisorService = {
   },
 
   async scheduleAdvisorMeeting(meeting: Omit<AdvisorMeeting, "id" | "userId" | "advisor">): Promise<AdvisorMeeting> {
+    console.log("Service received meeting data:", meeting);
+    
+    if (!meeting.topic || meeting.topic.trim() === '') {
+      throw new Error('Meeting topic is required');
+    }
+    
+    if (!meeting.advisorId) {
+      throw new Error('Advisor ID is required');
+    }
+    
+    if (!meeting.date) {
+      throw new Error('Meeting date is required');
+    }
+    
     const { data, error } = await supabase
       .from('advisor_meetings')
       .insert([{
