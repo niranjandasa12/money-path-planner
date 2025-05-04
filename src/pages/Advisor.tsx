@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -64,7 +65,8 @@ const AdvisorPage = () => {
   
   const { 
     data: meetings = [], 
-    isLoading: meetingsLoading 
+    isLoading: meetingsLoading,
+    refetch: refetchMeetings
   } = useQuery({
     queryKey: ['advisorMeetings'],
     queryFn: () => advisorService.getAdvisorMeetings(),
@@ -75,6 +77,7 @@ const AdvisorPage = () => {
       advisorService.scheduleAdvisorMeeting(meetingData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['advisorMeetings'] });
+      refetchMeetings(); // Explicitly refetch meetings after scheduling
       toast.success("Meeting scheduled successfully");
       setNewMeeting({
         advisorId: selectedAdvisor?.id || 0,
@@ -92,6 +95,7 @@ const AdvisorPage = () => {
     mutationFn: (id: number) => advisorService.cancelAdvisorMeeting(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['advisorMeetings'] });
+      refetchMeetings(); // Explicitly refetch meetings after cancellation
       toast.success("Meeting cancelled successfully");
     },
     onError: (error) => {
@@ -166,7 +170,7 @@ const AdvisorPage = () => {
     
     setChatMessages(prev => [...prev, userMessage]);
     const newConvoMessage: ConversationMessage = { role: 'user', content: chatMessage.trim() };
-    const updatedConversationHistory: ConversationMessage[] = [...conversationHistory, newConvoMessage];
+    const updatedConversationHistory = [...conversationHistory, newConvoMessage];
     setConversationHistory(updatedConversationHistory);
     
     const currentMessage = chatMessage.trim();
@@ -254,7 +258,8 @@ const AdvisorPage = () => {
       </DashboardLayout>
     );
   }
-  
+
+  // Force sort meetings chronologically to ensure they display properly
   const upcomingMeetings = meetings
     .filter(meeting => new Date(meeting.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -399,12 +404,12 @@ const AdvisorPage = () => {
                               alt={meeting.advisor?.name} 
                             />
                             <AvatarFallback>
-                              {meeting.advisor?.name.charAt(0)}
+                              {meeting.advisor?.name ? meeting.advisor.name.charAt(0) : '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="ml-3">
-                            <div className="font-medium">{meeting.advisor?.name}</div>
-                            <div className="text-xs text-gray-500">{meeting.advisor?.expertise}</div>
+                            <div className="font-medium">{meeting.advisor?.name || 'Advisor'}</div>
+                            <div className="text-xs text-gray-500">{meeting.advisor?.expertise || 'Financial Advisor'}</div>
                           </div>
                         </div>
                         <AlertDialog>
@@ -473,7 +478,7 @@ const AdvisorPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
-                <Tabs defaultValue="profile" className="flex-1 flex flex-col">
+                <Tabs defaultValue="chat" className="flex-1 flex flex-col">
                   <TabsList className="mx-auto mb-4">
                     <TabsTrigger value="profile">Profile</TabsTrigger>
                     <TabsTrigger value="chat">Chat</TabsTrigger>
