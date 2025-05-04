@@ -211,26 +211,26 @@ export const goals: Goal[] = [
   }
 ];
 
-// Mock advisors data with Indian names
+// Mock advisors data with updated names
 export const advisors: Advisor[] = [
   {
     id: 1,
-    name: 'Arjun Sharma',
-    email: 'arjun@financialadvisor.com',
+    name: 'Abel Sangeeth',
+    email: 'abel@financialadvisor.com',
     expertise: 'Retirement Planning',
     imageUrl: 'https://randomuser.me/api/portraits/men/45.jpg'
   },
   {
     id: 2,
-    name: 'Priya Patel',
-    email: 'priya@financialadvisor.com',
+    name: 'Sanish Joseph',
+    email: 'sanish@financialadvisor.com',
     expertise: 'Tax Strategy',
-    imageUrl: 'https://randomuser.me/api/portraits/women/22.jpg'
+    imageUrl: 'https://randomuser.me/api/portraits/men/22.jpg'
   },
   {
     id: 3,
-    name: 'Vikram Mehta',
-    email: 'vikram@financialadvisor.com',
+    name: 'Sudhev Krishna',
+    email: 'sudhev@financialadvisor.com',
     expertise: 'Real Estate Investment',
     imageUrl: 'https://randomuser.me/api/portraits/men/33.jpg'
   }
